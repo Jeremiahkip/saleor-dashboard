@@ -45,7 +45,7 @@ import ProductShipping from "../ProductShipping/ProductShipping";
 import ProductStocks, { ProductStockInput } from "../ProductStocks";
 import ProductTaxes from "../ProductTaxes";
 import ProductVariants from "../ProductVariants";
-import ProductUpdateForm from "./form";
+import ProductUpdateForm, { FileAttributeInput } from "./form";
 
 export interface ProductUpdatePageProps extends ListActions, ChannelProps {
   defaultWeightUnit: string;
@@ -93,6 +93,8 @@ export interface ProductUpdatePageSubmitData
     ChannelProps {
   addStocks: ProductStockInput[];
   attributes: AttributeInput[];
+  addFileAttributes: FileAttributeInput[];
+  removeFileAttributeValues: AttributeInput[];
   collections: string[];
   description: OutputData;
   removeStocks: string[];
@@ -223,6 +225,8 @@ export const ProductUpdatePage: React.FC<ProductUpdatePageProps> = ({
                     disabled={disabled}
                     onChange={handlers.selectAttribute}
                     onMultiChange={handlers.selectAttributeMultiple}
+                    onFileUpload={handlers.addAttributeFile}
+                    onFileDelete={handlers.deleteAttributeFile}
                   />
                 )}
                 <CardSpacer />

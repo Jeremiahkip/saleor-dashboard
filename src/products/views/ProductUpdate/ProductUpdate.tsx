@@ -255,11 +255,14 @@ export const ProductUpdate: React.FC<ProductUpdateProps> = ({ id, params }) => {
     product,
     createUpdateHandler(
       product,
+      variables => fileUpload({ variables }),
       variables => updateProduct({ variables }),
       variables => updateSimpleProduct({ variables }),
       updateChannels,
       updateVariantChannels,
-      productVariantCreate
+      productVariantCreate,
+      variables => setProductAvailability({ variables }),
+      variables => attributeValueDelete({ variables })
     ),
     variables => updateMetadata({ variables }),
     variables => updatePrivateMetadata({ variables })
