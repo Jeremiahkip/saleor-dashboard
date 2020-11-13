@@ -1,5 +1,6 @@
 import gql from "graphql-tag";
 
+import { fileFragment } from "./file";
 import { metadataFragment } from "./metadata";
 import { taxTypeFragment } from "./taxes";
 import { weightFragment } from "./weight";
@@ -112,6 +113,7 @@ export const productFragment = gql`
 `;
 
 export const productVariantAttributesFragment = gql`
+  ${fileFragment}
   ${fragmentMoney}
   fragment ProductVariantAttributesFragment on Product {
     id
@@ -126,12 +128,18 @@ export const productVariantAttributesFragment = gql`
           id
           name
           slug
+          file {
+            ...FileFragment
+          }
         }
       }
       values {
         id
         name
         slug
+        file {
+          ...FileFragment
+        }
       }
     }
     productType {
@@ -143,6 +151,9 @@ export const productVariantAttributesFragment = gql`
           id
           name
           slug
+          file {
+            ...FileFragment
+          }
         }
       }
     }
@@ -249,12 +260,18 @@ export const fragmentVariant = gql`
           id
           name
           slug
+          file {
+            ...FileFragment
+          }
         }
       }
       values {
         id
         name
         slug
+        file {
+          ...FileFragment
+        }
       }
     }
     images {

@@ -1,9 +1,19 @@
+import {
+  AttributeValueDelete,
+  AttributeValueDeleteVariables
+} from "@saleor/attributes/types/AttributeValueDelete";
 import { createSortedChannelsDataFromProduct } from "@saleor/channels/utils";
+import {
+  FileUpload,
+  FileUploadVariables
+} from "@saleor/files/types/FileUpload";
+import { AttributeErrorFragment } from "@saleor/fragments/types/AttributeErrorFragment";
 import { BulkStockErrorFragment } from "@saleor/fragments/types/BulkStockErrorFragment";
 import { ProductChannelListingErrorFragment } from "@saleor/fragments/types/ProductChannelListingErrorFragment";
 import { ProductErrorFragment } from "@saleor/fragments/types/ProductErrorFragment";
 import { StockErrorFragment } from "@saleor/fragments/types/StockErrorFragment";
-import { weight } from "@saleor/misc";
+import { UploadErrorFragment } from "@saleor/fragments/types/UploadErrorFragment";
+import { decimal, weight } from "@saleor/misc";
 import { ProductUpdatePageSubmitData } from "@saleor/products/components/ProductUpdatePage";
 import {
   ProductChannelListingUpdate,
@@ -34,7 +44,10 @@ import {
 import { mapFormsetStockToStockInput } from "@saleor/products/utils/data";
 import { getAvailabilityVariables } from "@saleor/products/utils/handlers";
 import { ReorderEvent } from "@saleor/types";
-import { AttributeValueInput } from "@saleor/types/globalTypes";
+import {
+  AttributeInputTypeEnum,
+  AttributeValueInput
+} from "@saleor/types/globalTypes";
 import { diff } from "fast-array-diff";
 import { MutationFetchResult } from "react-apollo";
 import { arrayMove } from "react-sortable-hoc";
@@ -97,7 +110,9 @@ const getVariantChannelsInput = (data: ProductUpdatePageSubmitData) =>
 
 export function createUpdateHandler(
   product: ProductDetails_product,
-  uploadFile: (variables: any) => Promise<MutationFetchResult<any>>,
+  uploadFile: (
+    variables: FileUploadVariables
+  ) => Promise<MutationFetchResult<FileUpload>>,
   updateProduct: (
     variables: ProductUpdateVariables
   ) => Promise<MutationFetchResult<ProductUpdate>>,
@@ -116,30 +131,69 @@ export function createUpdateHandler(
   setProductAvailability: (
     variables: ProductSetAvailabilityForPurchaseVariables
   ) => Promise<MutationFetchResult<ProductSetAvailabilityForPurchase>>,
-  removeAttributeValue: (variables: any) => Promise<MutationFetchResult<any>>
+  deleteAttributeValue: (
+    variables: AttributeValueDeleteVariables
+  ) => Promise<MutationFetchResult<AttributeValueDelete>>
 ) {
   return async (data: ProductUpdatePageSubmitData) => {
-    const addedFileAttributes: AttributeValueInput[] = [];
-    data.addFileAttributes.forEach(async fileAttribute => {
-      const uploadFileResult = await uploadFile({
-        file: fileAttribute.file
+    let errors: Array<
+      | ProductErrorFragment
+      | StockErrorFragment
+      | BulkStockErrorFragment
+      | AttributeErrorFragment
+      | UploadErrorFragment
+    >;
+
+    const attributesWithAddedNewFiles = await data.attributesWithNewFileValue.reduce(
+      async (prevUploadPromise, fileAttribute) => {
+        // Asynchronously upload file
+        const uploadFileResult = await uploadFile({
+          file: fileAttribute.value
+        });
+        // Synchronously gather results
+        const attributesWithAddedFiles = await prevUploadPromise;
+        errors = [...errors, ...uploadFileResult.data.fileUpload.errors];
+        return [
+          ...attributesWithAddedFiles,
+          {
+            file: uploadFileResult.data.fileUpload.url,
+            id: fileAttribute.id,
+            values: []
+          }
+        ];
+      },
+      Promise.resolve<AttributeValueInput[]>([])
+    );
+    const attributesWithoutAddedNewFiles = data.attributes
+      .filter(attribute =>
+        data.attributesWithNewFileValue.every(
+          attributeWithNewFileValue =>
+            attributeWithNewFileValue.id !== attribute.id
+        )
+      )
+      .map(attribute => {
+        if (attribute.data.inputType === AttributeInputTypeEnum.FILE) {
+          return {
+            file: attribute.value[0],
+            id: attribute.id,
+            values: []
+          };
+        }
+        return {
+          file: undefined,
+          id: attribute.id,
+          values: attribute.value[0] === "" ? [] : attribute.value
+        };
       });
-      errors = [...errors, ...uploadFileResult.data.uploadFile.errors];
-      addedFileAttributes.push({
-        id: fileAttribute.attributeId,
-        values: [uploadFileResult.data.uploadFile.data.url]
-      });
-    });
-    const restAttributes = data.attributes.map(attribute => ({
-      id: attribute.id,
-      values: attribute.value[0] === "" ? [] : attribute.value
-    }));
-    const allAttributes = [...restAttributes, ...addedFileAttributes];
+    const attributesInput = [
+      ...attributesWithoutAddedNewFiles,
+      ...attributesWithAddedNewFiles
+    ];
 
     const productVariables: ProductUpdateVariables = {
       id: product.id,
       input: {
-        attributes: allAttributes,
+        attributes: attributesInput,
         basePrice: decimal(data.basePrice),
         category: data.category,
         chargeTaxes: data.chargeTaxes,
@@ -227,15 +281,33 @@ export function createUpdateHandler(
       }
     }
 
-    data.removeFileAttributeValues.forEach(async fileAttributeValueId => {
-      const removeAttributeValueResult = await removeAttributeValue({
-        id: fileAttributeValueId
-      });
-      errors = [
-        ...errors,
-        ...removeAttributeValueResult.data.removeAttributeValue.errors
-      ];
-    });
+    await product.attributes.reduce(
+      async (prevDeleteUnusedValuePromise, existingAttribute) => {
+        // Asynchronously make calculations
+        const fileValueUnused =
+          existingAttribute.attribute.inputType ===
+            AttributeInputTypeEnum.FILE &&
+          existingAttribute.values.length > 0 &&
+          data.attributes.find(
+            dataAttribute => dataAttribute.id === existingAttribute.attribute.id
+          ).value.length === 0;
+
+        if (fileValueUnused) {
+          // Asynchronously delete unused attribute values
+          const deleteAttributeValueResult = await deleteAttributeValue({
+            id: existingAttribute.values[0].id
+          });
+
+          // Synchronously gather results
+          await prevDeleteUnusedValuePromise;
+          errors = [
+            ...errors,
+            ...deleteAttributeValueResult.data.attributeValueDelete.errors
+          ];
+        }
+      },
+      Promise.resolve()
+    );
 
     return errors;
   };

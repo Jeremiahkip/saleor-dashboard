@@ -17,6 +17,7 @@ import { ProductErrorWithAttributesFragment } from "@saleor/fragments/types/Prod
 import { TaxTypeFragment } from "@saleor/fragments/types/TaxTypeFragment";
 import { WarehouseFragment } from "@saleor/fragments/types/WarehouseFragment";
 import { SubmitPromise } from "@saleor/hooks/useForm";
+import { FormsetData } from "@saleor/hooks/useFormset";
 import useStateFromProps from "@saleor/hooks/useStateFromProps";
 import { sectionNames } from "@saleor/intl";
 import { maybe } from "@saleor/misc";
@@ -45,7 +46,7 @@ import ProductShipping from "../ProductShipping/ProductShipping";
 import ProductStocks, { ProductStockInput } from "../ProductStocks";
 import ProductTaxes from "../ProductTaxes";
 import ProductVariants from "../ProductVariants";
-import ProductUpdateForm, { FileAttributeInput } from "./form";
+import ProductUpdateForm from "./form";
 
 export interface ProductUpdatePageProps extends ListActions, ChannelProps {
   defaultWeightUnit: string;
@@ -93,8 +94,7 @@ export interface ProductUpdatePageSubmitData
     ChannelProps {
   addStocks: ProductStockInput[];
   attributes: AttributeInput[];
-  addFileAttributes: FileAttributeInput[];
-  removeFileAttributeValues: AttributeInput[];
+  attributesWithNewFileValue: FormsetData<null, File>;
   collections: string[];
   description: OutputData;
   removeStocks: string[];
@@ -225,8 +225,7 @@ export const ProductUpdatePage: React.FC<ProductUpdatePageProps> = ({
                     disabled={disabled}
                     onChange={handlers.selectAttribute}
                     onMultiChange={handlers.selectAttributeMultiple}
-                    onFileUpload={handlers.addAttributeFile}
-                    onFileDelete={handlers.deleteAttributeFile}
+                    onFileChange={handlers.selectAttributeFile}
                   />
                 )}
                 <CardSpacer />
