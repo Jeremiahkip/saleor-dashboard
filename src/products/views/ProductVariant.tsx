@@ -1,7 +1,11 @@
 import placeholderImg from "@assets/images/placeholder255x255.png";
+import { useAttributeValueDeleteMutation } from "@saleor/attributes/mutations";
 import { createVariantChannels } from "@saleor/channels/utils";
 import NotFoundPage from "@saleor/components/NotFoundPage";
 import { WindowTitle } from "@saleor/components/WindowTitle";
+import { useFileUploadMutation } from "@saleor/files/mutations";
+import { AttributeErrorFragment } from "@saleor/fragments/types/AttributeErrorFragment";
+import { UploadErrorFragment } from "@saleor/fragments/types/UploadErrorFragment";
 import useNavigator from "@saleor/hooks/useNavigator";
 import useNotifier from "@saleor/hooks/useNotifier";
 import useOnSetDefaultVariant from "@saleor/hooks/useOnSetDefaultVariant";
@@ -9,6 +13,10 @@ import useShop from "@saleor/hooks/useShop";
 import { commonMessages } from "@saleor/intl";
 import { useProductVariantChannelListingUpdate } from "@saleor/products/mutations";
 import { ProductVariantDetails_productVariant } from "@saleor/products/types/ProductVariantDetails";
+import {
+  AttributeInputTypeEnum,
+  AttributeValueInput
+} from "@saleor/types/globalTypes";
 import createDialogActionHandlers from "@saleor/utils/handlers/dialogActionHandlers";
 import createMetadataUpdateHandler from "@saleor/utils/handlers/metadataUpdateHandler";
 import {
@@ -22,7 +30,9 @@ import { useIntl } from "react-intl";
 
 import { weight } from "../../misc";
 import ProductVariantDeleteDialog from "../components/ProductVariantDeleteDialog";
-import ProductVariantPage from "../components/ProductVariantPage";
+import ProductVariantPage, {
+  ProductVariantPageSubmitData
+} from "../components/ProductVariantPage";
 import { ProductVariantUpdateSubmitData } from "../components/ProductVariantPage/form";
 import {
   useProductVariantReorderMutation,
@@ -96,6 +106,13 @@ export const ProductVariant: React.FC<ProductUpdateProps> = ({
   );
 
   const handleBack = () => navigate(productUrl(productId));
+
+  const [uploadFile, uploadFileOpts] = useFileUploadMutation({});
+
+  const [
+    deleteAttributeValue,
+    deleteAttributeValueOpts
+  ] = useAttributeValueDeleteMutation({});
 
   const [assignImage, assignImageOpts] = useVariantImageAssignMutation({});
   const [unassignImage, unassignImageOpts] = useVariantImageUnassignMutation(
@@ -172,11 +189,13 @@ export const ProductVariant: React.FC<ProductUpdateProps> = ({
 
   const disableFormSave =
     loading ||
+    uploadFileOpts.loading ||
     deleteVariantOpts.loading ||
     updateVariantOpts.loading ||
     assignImageOpts.loading ||
     unassignImageOpts.loading ||
-    reorderProductVariantsOpts.loading;
+    reorderProductVariantsOpts.loading ||
+    deleteAttributeValueOpts.loading;
 
   const handleImageSelect = (id: string) => () => {
     if (variant) {
@@ -198,14 +217,64 @@ export const ProductVariant: React.FC<ProductUpdateProps> = ({
     }
   };
 
-  const handleUpdate = async (data: ProductVariantUpdateSubmitData) => {
+  const handleUpdate = async (data: ProductVariantPageSubmitData) => {
+    let submitErrors: Array<AttributeErrorFragment | UploadErrorFragment>;
+
+    const attributesWithAddedNewFiles = await data.attributesWithNewFileValue.reduce(
+      async (prevUploadPromise, fileAttribute) => {
+        // Asynchronously upload file
+        const uploadFileResult = await uploadFile({
+          variables: {
+            file: fileAttribute.value
+          }
+        });
+        // Synchronously gather results
+        const attributesWithAddedFiles = await prevUploadPromise;
+        submitErrors = [
+          ...submitErrors,
+          ...uploadFileResult.data.fileUpload.errors
+        ];
+        return [
+          ...attributesWithAddedFiles,
+          {
+            file: uploadFileResult.data.fileUpload.url,
+            id: fileAttribute.id,
+            values: []
+          }
+        ];
+      },
+      Promise.resolve<AttributeValueInput[]>([])
+    );
+    const attributesWithoutAddedNewFiles = data.attributes
+      .filter(attribute =>
+        data.attributesWithNewFileValue.every(
+          attributeWithNewFileValue =>
+            attributeWithNewFileValue.id !== attribute.id
+        )
+      )
+      .map(attribute => {
+        if (attribute.data.inputType === AttributeInputTypeEnum.FILE) {
+          return {
+            file: attribute.value[0],
+            id: attribute.id,
+            values: []
+          };
+        }
+        return {
+          file: undefined,
+          id: attribute.id,
+          values: attribute.value[0] === "" ? [] : attribute.value
+        };
+      });
+    const attributesInput = [
+      ...attributesWithoutAddedNewFiles,
+      ...attributesWithAddedNewFiles
+    ];
+
     const result = await updateVariant({
       variables: {
         addStocks: data.addStocks.map(mapFormsetStockToStockInput),
-        attributes: data.attributes.map(attribute => ({
-          id: attribute.id,
-          values: attribute.value
-        })),
+        attributes: attributesInput,
         id: variantId,
         removeStocks: data.removeStocks,
         sku: data.sku,
@@ -216,7 +285,38 @@ export const ProductVariant: React.FC<ProductUpdateProps> = ({
     });
     handleSubmitChannels(data, variant);
 
+    await variant.attributes.reduce(
+      async (prevDeleteUnusedValuePromise, existingAttribute) => {
+        // Asynchronously make calculations
+        const fileValueUnused =
+          existingAttribute.attribute.inputType ===
+            AttributeInputTypeEnum.FILE &&
+          existingAttribute.values.length > 0 &&
+          data.attributes.find(
+            dataAttribute => dataAttribute.id === existingAttribute.attribute.id
+          ).value.length === 0;
+
+        if (fileValueUnused) {
+          // Asynchronously delete unused attribute values
+          const deleteAttributeValueResult = await deleteAttributeValue({
+            variables: {
+              id: existingAttribute.values[0].id
+            }
+          });
+
+          // Synchronously gather results
+          await prevDeleteUnusedValuePromise;
+          submitErrors = [
+            ...submitErrors,
+            ...deleteAttributeValueResult.data.attributeValueDelete.errors
+          ];
+        }
+      },
+      Promise.resolve()
+    );
+
     return [
+      ...submitErrors,
       ...result.data?.productVariantStocksCreate.errors,
       ...result.data?.productVariantStocksDelete.errors,
       ...result.data?.productVariantStocksUpdate.errors,

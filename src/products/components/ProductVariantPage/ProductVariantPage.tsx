@@ -13,6 +13,7 @@ import { ProductChannelListingErrorFragment } from "@saleor/fragments/types/Prod
 import { ProductErrorWithAttributesFragment } from "@saleor/fragments/types/ProductErrorWithAttributesFragment";
 import { ProductVariant } from "@saleor/fragments/types/ProductVariant";
 import { WarehouseFragment } from "@saleor/fragments/types/WarehouseFragment";
+import { FormsetData } from "@saleor/hooks/useFormset";
 import { VariantUpdate_productVariantUpdate_errors } from "@saleor/products/types/VariantUpdate";
 import { ReorderAction } from "@saleor/types";
 import React from "react";
@@ -40,6 +41,7 @@ export interface ProductVariantPageFormData extends MetadataFormData {
 export interface ProductVariantPageSubmitData
   extends ProductVariantPageFormData {
   attributes: AttributeInput[];
+  attributesWithNewFileValue: FormsetData<null, File>;
   addStocks: ProductStockInput[];
   updateStocks: ProductStockInput[];
   removeStocks: string[];
@@ -154,6 +156,7 @@ const ProductVariantPage: React.FC<ProductVariantPageProps> = ({
                     errors={errors}
                     onChange={handlers.selectAttribute}
                     onMultiChange={handlers.selectAttributeMultiple}
+                    onFileChange={handlers.selectAttributeFile}
                   />
                   <CardSpacer />
                   <ProductVariantImages
