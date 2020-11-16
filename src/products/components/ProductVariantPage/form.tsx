@@ -9,6 +9,7 @@ import useFormset, {
 } from "@saleor/hooks/useFormset";
 import {
   getAttributeInputFromVariant,
+  getAttributesDisplayData,
   getStockInputFromVariant
 } from "@saleor/products/utils/data";
 import { getChannelsInput } from "@saleor/products/utils/handlers";
@@ -175,7 +176,10 @@ function useProductVariantUpdateForm(
   );
   const data: ProductVariantUpdateData = {
     ...form.data,
-    attributes: attributes.data,
+    attributes: getAttributesDisplayData(
+      attributes.data,
+      attributesWithNewFileValue.data
+    ),
     channelListings: channels.data,
     stocks: stocks.data
   };

@@ -30,12 +30,14 @@ export const product: (
         values: [
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav47282",
             name: "portals",
             slug: "portals"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav17253",
             name: "Baht",
             slug: "Baht"
@@ -45,6 +47,7 @@ export const product: (
       values: [
         {
           __typename: "AttributeValue",
+          file: null,
           id: "ptav47282",
           name: "portals",
           slug: "portals"
@@ -63,24 +66,28 @@ export const product: (
         values: [
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav31282",
             name: "payment",
             slug: "payment"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav14907",
             name: "Auto Loan Account",
             slug: "Auto-Loan-Account"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav27366",
             name: "Garden",
             slug: "Garden"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav11873",
             name: "override",
             slug: "override"
@@ -90,6 +97,7 @@ export const product: (
       values: [
         {
           __typename: "AttributeValue",
+          file: null,
           id: "ptav14907",
           name: "Auto Loan Account",
           slug: "Auto-Loan-Account"
@@ -259,17 +267,17 @@ export const product: (
         values: [
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptvav47282",
             name: "Black",
-            slug: "black",
-            sortOrder: 0
+            slug: "black"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptvav17253",
             name: "White",
-            slug: "white",
-            sortOrder: 1
+            slug: "white"
           }
         ]
       }
@@ -2504,12 +2512,14 @@ export const variant = (placeholderImage: string): ProductVariant => ({
         values: [
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav47282",
             name: "portals",
             slug: "portals"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav17253",
             name: "Baht",
             slug: "Baht"
@@ -2519,6 +2529,7 @@ export const variant = (placeholderImage: string): ProductVariant => ({
       values: [
         {
           __typename: "AttributeValue",
+          file: null,
           id: "ptav47282",
           name: "portals",
           slug: "portals"
@@ -2537,24 +2548,28 @@ export const variant = (placeholderImage: string): ProductVariant => ({
         values: [
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav31282",
             name: "payment",
             slug: "payment"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav14907",
             name: "Auto Loan Account",
             slug: "Auto-Loan-Account"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav27366",
             name: "Garden",
             slug: "Garden"
           },
           {
             __typename: "AttributeValue",
+            file: null,
             id: "ptav11873",
             name: "override",
             slug: "override"
@@ -2564,6 +2579,7 @@ export const variant = (placeholderImage: string): ProductVariant => ({
       values: [
         {
           __typename: "AttributeValue",
+          file: null,
           id: "ptav14907",
           name: "Auto Loan Account",
           slug: "Auto-Loan-Account"
